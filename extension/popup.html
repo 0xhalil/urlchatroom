@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URLChatroom</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>URLChatroom</h1>
+        <p id="urlLabel" class="url-label">Loading page...</p>
+      </div>
+      <button id="openSettingsBtn" class="ghost-btn" type="button" style="display:none;">Settings</button>
+    </header>
+
+    <div id="connectionBadge" class="connection-badge">Offline</div>
+
+    <section id="authPanel" class="panel auth-panel">
+      <p class="panel-title">Sign in required</p>
+      <button id="verifyGoogleBtn" type="button">Sign in with Google</button>
+      <p class="hint">Sign in once, then chat on the current page URL.</p>
+    </section>
+
+    <section id="chatPanel" class="panel chat-panel" style="display:none;">
+      <div class="chat-head">
+        <p id="userLabel" class="user-label">Not signed in</p>
+      </div>
+      <section id="messages" class="messages" aria-live="polite"></section>
+      <form id="composer" class="composer">
+        <textarea id="messageInput" maxlength="1000" placeholder="Write a message..."></textarea>
+        <button id="sendBtn" type="submit">Send</button>
+      </form>
+    </section>
+
+    <aside id="settingsDrawer" class="settings-drawer" style="display:none;">
+      <div class="drawer-head">
+        <h2>Settings</h2>
+        <button id="closeSettingsBtn" class="ghost-btn" type="button">Close</button>
+      </div>
+      <p id="settingsEmail" class="settings-email"></p>
+      <label for="nickInput">Nickname</label>
+      <input id="nickInput" type="text" maxlength="64" placeholder="Enter nickname" />
+      <button id="saveNickBtn" type="button">Save Nickname</button>
+      <button id="logoutBtn" type="button" class="danger-btn">Logout</button>
+    </aside>
+
+    <p id="status" class="status"></p>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
