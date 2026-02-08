@@ -2,80 +2,252 @@ import { buildThreadKey, normalizeUrl } from "./lib/url-normalize.js";
 
 const API_BASE = "http://localhost:8000";
 const WS_BASE = "ws://localhost:8000";
+const NOTIFY_ICON_URL = "https://www.google.com/favicon.ico";
 
-const urlLabel = document.getElementById("urlLabel");
-const userLabel = document.getElementById("userLabel");
-const statusEl = document.getElementById("status");
+const DEFAULT_SETTINGS = {
+  language: "tr",
+  darkMode: false,
+  notifyNewMessages: true,
+  notifyMentions: true
+};
+
+const I18N = {
+  tr: {
+    brand_sub: "Sayfa odası",
+    active_page: "Aktif sayfa",
+    signin_title: "Giriş yapın",
+    signin_desc: "Bu sayfayı görüntüleyen diğer kullanıcılarla sohbet etmek için Google hesabınızla giriş yapın.",
+    signin_google: "Google ile giriş yap",
+    signed_out_badge: "Çıkış yapıldı",
+    settings_title: "Ayarlar",
+    nickname_label: "Nickname",
+    nickname_placeholder: "Nickname girin",
+    save_nickname: "Nickname Kaydet",
+    notifications_group: "Bildirimler",
+    new_messages: "Yeni mesajlar",
+    mentions: "Bahsetmeler",
+    appearance_group: "Görünüm",
+    dark_mode: "Karanlık mod",
+    language_group: "Dil",
+    language_label: "Uygulama dili",
+    logout: "Çıkış yap",
+    footer_note: "Aynı URL'i görüntüleyen kişilerle sohbet edin",
+    connected: "● Bağlı",
+    reconnecting: "◐ Yeniden bağlanıyor",
+    offline: "○ Çevrimdışı",
+    signed_in_ok: "Giriş başarılı",
+    signed_out_ok: "Çıkış yapıldı",
+    nickname_updated: "Nickname güncellendi",
+    ready: "Hazır",
+    send_failed: "Mesaj gönderilemedi",
+    signin_required: "Giriş gerekli",
+    notify_new_title: "Yeni mesaj",
+    notify_mention_title: "Bahsetme",
+    me_label: "Sen",
+    active_people: "{count} kişi aktif"
+  },
+  en: {
+    brand_sub: "Page room",
+    active_page: "Active page",
+    signin_title: "Sign in",
+    signin_desc: "Sign in with Google to chat with others viewing this page.",
+    signin_google: "Sign in with Google",
+    signed_out_badge: "Signed out",
+    settings_title: "Settings",
+    nickname_label: "Nickname",
+    nickname_placeholder: "Enter nickname",
+    save_nickname: "Save Nickname",
+    notifications_group: "Notifications",
+    new_messages: "New messages",
+    mentions: "Mentions",
+    appearance_group: "Appearance",
+    dark_mode: "Dark mode",
+    language_group: "Language",
+    language_label: "App language",
+    logout: "Logout",
+    footer_note: "Chat with people viewing the same URL",
+    connected: "● Connected",
+    reconnecting: "◐ Reconnecting",
+    offline: "○ Offline",
+    signed_in_ok: "Signed in",
+    signed_out_ok: "Signed out",
+    nickname_updated: "Nickname updated",
+    ready: "Ready",
+    send_failed: "Failed to send message",
+    signin_required: "Sign in required",
+    notify_new_title: "New message",
+    notify_mention_title: "Mention",
+    me_label: "You",
+    active_people: "{count} active"
+  }
+};
+
+const mainHeader = document.getElementById("mainHeader");
 const connectionBadge = document.getElementById("connectionBadge");
-const authPanel = document.getElementById("authPanel");
-const chatPanel = document.getElementById("chatPanel");
+const urlLabel = document.getElementById("urlLabel");
+const statusEl = document.getElementById("status");
+
+const signInView = document.getElementById("signInView");
+const chatView = document.getElementById("chatView");
+const settingsView = document.getElementById("settingsView");
+const guestFooter = document.getElementById("guestFooter");
+
+const verifyGoogleBtn = document.getElementById("verifyGoogleBtn");
+const openSettingsBtn = document.getElementById("openSettingsBtn");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+
+const userLabel = document.getElementById("userLabel");
+const onlineBadge = document.getElementById("onlineBadge");
 const messagesEl = document.getElementById("messages");
 const composer = document.getElementById("composer");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
-const verifyGoogleBtn = document.getElementById("verifyGoogleBtn");
-const openSettingsBtn = document.getElementById("openSettingsBtn");
-const closeSettingsBtn = document.getElementById("closeSettingsBtn");
-const settingsDrawer = document.getElementById("settingsDrawer");
+
+const avatarFallback = document.getElementById("avatarFallback");
+const settingsName = document.getElementById("settingsName");
 const settingsEmail = document.getElementById("settingsEmail");
 const nickInput = document.getElementById("nickInput");
 const saveNickBtn = document.getElementById("saveNickBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
+const notifyNewMessagesEl = document.getElementById("notifyNewMessages");
+const notifyMentionsEl = document.getElementById("notifyMentions");
+const darkModeToggleEl = document.getElementById("darkModeToggle");
+const languageSelectEl = document.getElementById("languageSelect");
+
 let threadKey = "";
 let clientId = "";
 let ws = null;
-let reconnectTimer = null;
-let reconnectAttempts = 0;
 let authToken = "";
 let currentUser = null;
 let lastGoogleAccessToken = "";
-let sending = false;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+let isSending = false;
+let settingsOpen = false;
+let appSettings = { ...DEFAULT_SETTINGS };
+
+function t(key, vars = {}) {
+  const lang = I18N[appSettings.language] || I18N.tr;
+  let value = lang[key] || I18N.tr[key] || key;
+  Object.entries(vars).forEach(([k, v]) => {
+    value = value.replace(`{${k}}`, String(v));
+  });
+  return value;
+}
 
 function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function applyI18n() {
+  document.documentElement.lang = appSettings.language;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.getAttribute("data-i18n"));
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+  });
+  updateOnlineBadge(1);
+}
+
+function applyTheme() {
+  document.body.classList.toggle("dark", Boolean(appSettings.darkMode));
+}
+
+function applySettingsToControls() {
+  notifyNewMessagesEl.checked = Boolean(appSettings.notifyNewMessages);
+  notifyMentionsEl.checked = Boolean(appSettings.notifyMentions);
+  darkModeToggleEl.checked = Boolean(appSettings.darkMode);
+  languageSelectEl.value = appSettings.language;
+}
+
+async function saveSettings() {
+  await chrome.storage.local.set({ urlchatroom_settings: appSettings });
+}
+
+async function loadSettings() {
+  const stored = await chrome.storage.local.get("urlchatroom_settings");
+  appSettings = { ...DEFAULT_SETTINGS, ...(stored.urlchatroom_settings || {}) };
+  applySettingsToControls();
+  applyTheme();
+  applyI18n();
+}
+
 function setConnectionState(state) {
   if (state === "connected") {
-    connectionBadge.textContent = "Connected";
-    connectionBadge.style.background = "#1f7a3a";
+    connectionBadge.textContent = t("connected");
+    connectionBadge.style.background = "#16a34a";
+    connectionBadge.style.color = "#ffffff";
     return;
   }
   if (state === "reconnecting") {
-    connectionBadge.textContent = "Reconnecting";
-    connectionBadge.style.background = "#946200";
+    connectionBadge.textContent = t("reconnecting");
+    connectionBadge.style.background = "#f59e0b";
+    connectionBadge.style.color = "#ffffff";
     return;
   }
-  connectionBadge.textContent = "Offline";
-  connectionBadge.style.background = "#9f2d2d";
+  connectionBadge.textContent = t("offline");
+  connectionBadge.style.background = "var(--surface-soft-2)";
+  connectionBadge.style.color = "var(--text)";
 }
 
-function setSendingState(isSending) {
-  sending = isSending;
-  sendBtn.disabled = isSending;
-  input.disabled = isSending;
-  sendBtn.textContent = isSending ? "Sending..." : "Send";
+function getInitials(name) {
+  return (
+    name
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "U"
+  );
 }
 
-function setAuthUi(isAuthed) {
-  authPanel.style.display = isAuthed ? "none" : "block";
-  chatPanel.style.display = isAuthed ? "block" : "none";
-  openSettingsBtn.style.display = isAuthed ? "inline-block" : "none";
-  if (!isAuthed) {
-    settingsDrawer.style.display = "none";
-    userLabel.textContent = "Not signed in";
-    setStatus("Sign in required");
+function containsMention(text) {
+  if (!currentUser?.display_name) {
+    return false;
+  }
+  const escaped = currentUser.display_name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const mentionRegex = new RegExp(`\\b${escaped}\\b`, "i");
+  return mentionRegex.test(text);
+}
+
+function maybeNotifyIncomingMessage(msg) {
+  if (!currentUser || msg.client_id === currentUser.display_name) {
+    return;
+  }
+  const isMention = containsMention(msg.content || "");
+  if (isMention && !appSettings.notifyMentions) {
+    return;
+  }
+  if (!isMention && !appSettings.notifyNewMessages) {
+    return;
+  }
+  if (!chrome.notifications) {
+    return;
+  }
+  try {
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: NOTIFY_ICON_URL,
+      title: isMention ? t("notify_mention_title") : t("notify_new_title"),
+      message: `${msg.client_id}: ${msg.content}`.slice(0, 180)
+    }, () => {});
+  } catch (_error) {
+    // notification failures should not break chat rendering
   }
 }
 
 function renderMessage(msg) {
   const item = document.createElement("article");
-  item.className = "message";
+  const isCurrentUser = currentUser && msg.client_id === currentUser.display_name;
+  const isMention = !isCurrentUser && containsMention(msg.content || "");
+  item.className = `message${isCurrentUser ? " me" : ""}${isMention ? " mention" : ""}`;
 
   const meta = document.createElement("div");
   meta.className = "message-meta";
-  meta.textContent = `${msg.client_id || "unknown"} • ${new Date(msg.created_at).toLocaleString()}`;
+  const sender = isCurrentUser ? t("me_label") : msg.client_id || "unknown";
+  meta.textContent = `${sender} • ${new Date(msg.created_at).toLocaleTimeString(appSettings.language === "tr" ? "tr-TR" : "en-US", { hour: "2-digit", minute: "2-digit" })}`;
 
   const body = document.createElement("div");
   body.textContent = msg.content;
@@ -89,6 +261,43 @@ function clearMessages() {
   messagesEl.innerHTML = "";
 }
 
+function applyUser(user) {
+  currentUser = user;
+  if (!user) {
+    userLabel.textContent = "";
+    settingsName.textContent = "User";
+    settingsEmail.textContent = "-";
+    nickInput.value = "";
+    avatarFallback.textContent = "U";
+    return;
+  }
+  userLabel.textContent = user.display_name;
+  settingsName.textContent = user.display_name;
+  settingsEmail.textContent = user.email;
+  nickInput.value = user.display_name;
+  avatarFallback.textContent = getInitials(user.display_name);
+}
+
+function renderView() {
+  const signedIn = Boolean(currentUser && authToken);
+  const showingSettings = signedIn && settingsOpen;
+
+  signInView.style.display = signedIn ? "none" : "flex";
+  chatView.style.display = signedIn && !showingSettings ? "flex" : "none";
+  settingsView.style.display = showingSettings ? "block" : "none";
+
+  mainHeader.style.display = showingSettings ? "none" : "block";
+  guestFooter.style.display = signedIn ? "none" : "block";
+  openSettingsBtn.style.display = signedIn && !showingSettings ? "inline-block" : "none";
+}
+
+function setSendingState(sending) {
+  isSending = sending;
+  sendBtn.disabled = sending;
+  input.disabled = sending;
+  sendBtn.textContent = sending ? "..." : "➤";
+}
+
 async function getStoredAuth() {
   const stored = await chrome.storage.local.get([
     "urlchatroom_auth_token",
@@ -99,6 +308,8 @@ async function getStoredAuth() {
 }
 
 async function setStoredAuth(token, googleToken = "") {
+  authToken = token;
+  lastGoogleAccessToken = googleToken;
   await chrome.storage.local.set({
     urlchatroom_auth_token: token,
     urlchatroom_google_access_token: googleToken
@@ -144,20 +355,6 @@ async function fetchMe() {
   return response.json();
 }
 
-function applyUser(user) {
-  currentUser = user;
-  if (!user) {
-    settingsEmail.textContent = "";
-    nickInput.value = "";
-    setAuthUi(false);
-    return;
-  }
-  userLabel.textContent = `Signed in as ${user.display_name}`;
-  settingsEmail.textContent = user.email;
-  nickInput.value = user.display_name;
-  setAuthUi(true);
-}
-
 function getGoogleAccessTokenInteractive() {
   return new Promise((resolve, reject) => {
     chrome.identity.getAuthToken({ interactive: true }, (token) => {
@@ -178,7 +375,6 @@ async function signInWithGoogle() {
   if (chrome.identity?.clearAllCachedAuthTokens) {
     await chrome.identity.clearAllCachedAuthTokens();
   }
-
   const accessToken = await getGoogleAccessTokenInteractive();
   const response = await fetch(`${API_BASE}/api/auth/google/verify`, {
     method: "POST",
@@ -189,60 +385,11 @@ async function signInWithGoogle() {
   if (!response.ok) {
     throw new Error(payload.detail || "Google verification failed");
   }
-  authToken = payload.access_token;
-  lastGoogleAccessToken = accessToken;
-  await setStoredAuth(authToken, accessToken);
+  await setStoredAuth(payload.access_token, accessToken);
   applyUser(payload.user);
-  setStatus("Signed in");
-}
-
-async function clearCachedGoogleToken() {
-  if (lastGoogleAccessToken && chrome.identity?.removeCachedAuthToken) {
-    await new Promise((resolve) => {
-      chrome.identity.removeCachedAuthToken({ token: lastGoogleAccessToken }, () => resolve());
-    });
-  }
-  if (chrome.identity?.clearAllCachedAuthTokens) {
-    await chrome.identity.clearAllCachedAuthTokens();
-  }
-  if (lastGoogleAccessToken) {
-    try {
-      await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(lastGoogleAccessToken)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" }
-      });
-    } catch (_error) {
-      // best effort
-    }
-  }
-  lastGoogleAccessToken = "";
-}
-
-async function logout() {
-  authToken = "";
-  currentUser = null;
-  await setStoredAuth("", "");
-  await clearCachedGoogleToken();
-  applyUser(null);
-  setStatus("Signed out");
-}
-
-async function updateNickname() {
-  const displayName = nickInput.value.trim();
-  if (displayName.length < 2) {
-    throw new Error("Nickname must be at least 2 characters");
-  }
-  const response = await fetch(`${API_BASE}/api/auth/me`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ display_name: displayName })
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.detail || "Failed to update nickname");
-  }
-  applyUser(payload);
-  setStatus("Nickname updated");
+  settingsOpen = false;
+  renderView();
+  setStatus(t("signed_in_ok"));
 }
 
 async function loadMessages() {
@@ -288,6 +435,7 @@ function connectWebSocket() {
   ws.onmessage = (event) => {
     const payload = JSON.parse(event.data);
     if (payload.type === "message") {
+      maybeNotifyIncomingMessage(payload.data);
       renderMessage(payload.data);
     }
   };
@@ -312,11 +460,63 @@ async function sendMessage(content) {
       content
     })
   });
-
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.detail || "Failed to send message");
+    throw new Error(errorBody.detail || t("send_failed"));
   }
+}
+
+async function updateNickname() {
+  const displayName = nickInput.value.trim();
+  if (displayName.length < 2) {
+    throw new Error("Nickname must be at least 2 chars");
+  }
+  const response = await fetch(`${API_BASE}/api/auth/me`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ display_name: displayName })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.detail || "Nickname update failed");
+  }
+  applyUser(payload);
+  setStatus(t("nickname_updated"));
+}
+
+async function clearCachedGoogleToken() {
+  if (lastGoogleAccessToken && chrome.identity?.removeCachedAuthToken) {
+    await new Promise((resolve) => {
+      chrome.identity.removeCachedAuthToken({ token: lastGoogleAccessToken }, () => resolve());
+    });
+  }
+  if (chrome.identity?.clearAllCachedAuthTokens) {
+    await chrome.identity.clearAllCachedAuthTokens();
+  }
+  if (lastGoogleAccessToken) {
+    try {
+      await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(lastGoogleAccessToken)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      });
+    } catch (_error) {
+      // Best effort.
+    }
+  }
+}
+
+async function logout() {
+  // Clear Google cached token first, then wipe local auth storage.
+  await clearCachedGoogleToken();
+  await setStoredAuth("", "");
+  applyUser(null);
+  settingsOpen = false;
+  renderView();
+  setStatus(t("signed_out_ok"));
+}
+
+function updateOnlineBadge(count) {
+  onlineBadge.textContent = `👥 ${t("active_people", { count })}`;
 }
 
 verifyGoogleBtn.addEventListener("click", async () => {
@@ -328,11 +528,13 @@ verifyGoogleBtn.addEventListener("click", async () => {
 });
 
 openSettingsBtn.addEventListener("click", () => {
-  settingsDrawer.style.display = "flex";
+  settingsOpen = true;
+  renderView();
 });
 
 closeSettingsBtn.addEventListener("click", () => {
-  settingsDrawer.style.display = "none";
+  settingsOpen = false;
+  renderView();
 });
 
 saveNickBtn.addEventListener("click", async () => {
@@ -351,24 +553,53 @@ logoutBtn.addEventListener("click", async () => {
   }
 });
 
+notifyNewMessagesEl.addEventListener("change", async () => {
+  appSettings.notifyNewMessages = notifyNewMessagesEl.checked;
+  await saveSettings();
+});
+
+notifyMentionsEl.addEventListener("change", async () => {
+  appSettings.notifyMentions = notifyMentionsEl.checked;
+  await saveSettings();
+});
+
+darkModeToggleEl.addEventListener("change", async () => {
+  appSettings.darkMode = darkModeToggleEl.checked;
+  applyTheme();
+  await saveSettings();
+});
+
+languageSelectEl.addEventListener("change", async () => {
+  appSettings.language = languageSelectEl.value === "en" ? "en" : "tr";
+  applyI18n();
+  setConnectionState(ws && ws.readyState === WebSocket.OPEN ? "connected" : "offline");
+  await saveSettings();
+});
+
 composer.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (sending || !currentUser) {
+  if (isSending || !currentUser) {
     return;
   }
-  const value = input.value.trim();
-  if (!value) {
+  const content = input.value.trim();
+  if (!content) {
     return;
   }
-
   setSendingState(true);
   try {
-    await sendMessage(value);
+    await sendMessage(content);
     input.value = "";
   } catch (error) {
-    setStatus(error.message || "Send failed");
+    setStatus(error.message || t("send_failed"));
   } finally {
     setSendingState(false);
+  }
+});
+
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    composer.requestSubmit();
   }
 });
 
@@ -376,23 +607,28 @@ composer.addEventListener("submit", async (event) => {
   try {
     setConnectionState("offline");
     setSendingState(false);
+    settingsOpen = false;
+
+    await loadSettings();
+
     const rawUrl = await getActiveTabUrl();
-    const normalized = normalizeUrl(rawUrl);
     threadKey = buildThreadKey(rawUrl);
+    urlLabel.textContent = normalizeUrl(rawUrl);
+
     clientId = await ensureClientId();
     await getStoredAuth();
+    const user = await fetchMe();
+    applyUser(user);
+    renderView();
+    updateOnlineBadge(user ? 1 : 0);
 
-    urlLabel.textContent = normalized;
     await loadMessages();
     connectWebSocket();
 
-    const user = await fetchMe();
     if (user) {
-      applyUser(user);
-      setStatus("Ready");
+      setStatus(t("ready"));
     } else {
-      await setStoredAuth("", "");
-      applyUser(null);
+      setStatus(t("signin_required"));
     }
   } catch (error) {
     setStatus(error.message || "Initialization failed");

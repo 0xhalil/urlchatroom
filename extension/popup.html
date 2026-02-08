@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,46 +7,101 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <main class="app">
-    <header class="topbar">
-      <div>
-        <h1>URLChatroom</h1>
-        <p id="urlLabel" class="url-label">Loading page...</p>
-      </div>
-      <button id="openSettingsBtn" class="ghost-btn" type="button" style="display:none;">Settings</button>
-    </header>
+  <main class="app-shell">
+    <section class="app-card">
+      <header id="mainHeader" class="header">
+        <div class="header-top">
+          <div class="brand">
+            <div class="brand-icon">💬</div>
+            <div>
+              <h1>URLChatroom</h1>
+              <p class="brand-sub" data-i18n="brand_sub">Sayfa odası</p>
+            </div>
+          </div>
+          <div class="header-actions">
+            <span id="connectionBadge" class="connection-badge">○ Çevrimdışı</span>
+            <button id="openSettingsBtn" class="icon-btn" type="button" style="display:none;">⚙</button>
+          </div>
+        </div>
+        <div class="url-box">
+          <p class="url-title" data-i18n="active_page">Aktif sayfa</p>
+          <p id="urlLabel" class="url-text">Loading page...</p>
+        </div>
+      </header>
 
-    <div id="connectionBadge" class="connection-badge">Offline</div>
+      <section id="signInView" class="view sign-view">
+        <div class="sign-hero">🔐</div>
+        <h2 data-i18n="signin_title">Giriş yapın</h2>
+        <p data-i18n="signin_desc">
+          Bu sayfayı görüntüleyen diğer kullanıcılarla sohbet etmek için
+          Google hesabınızla giriş yapın.
+        </p>
+        <button id="verifyGoogleBtn" class="google-btn" type="button">
+          <span>G</span>
+          <span data-i18n="signin_google">Google ile giriş yap</span>
+        </button>
+        <p class="sign-badge" data-i18n="signed_out_badge">Çıkış yapıldı</p>
+      </section>
 
-    <section id="authPanel" class="panel auth-panel">
-      <p class="panel-title">Sign in required</p>
-      <button id="verifyGoogleBtn" type="button">Sign in with Google</button>
-      <p class="hint">Sign in once, then chat on the current page URL.</p>
+      <section id="chatView" class="view chat-view" style="display:none;">
+        <div class="chat-meta">
+          <span id="onlineBadge" class="online-badge">👥 1 kişi aktif</span>
+          <span id="userLabel" class="user-label"></span>
+        </div>
+        <section id="messages" class="messages" aria-live="polite"></section>
+        <form id="composer" class="composer">
+          <textarea id="messageInput" maxlength="1000" placeholder="Mesajınızı yazın..."></textarea>
+          <button id="sendBtn" type="submit">➤</button>
+        </form>
+      </section>
+
+      <section id="settingsView" class="view settings-view" style="display:none;">
+        <div class="settings-head">
+          <button id="closeSettingsBtn" class="icon-btn" type="button">←</button>
+          <h2 data-i18n="settings_title">Ayarlar</h2>
+        </div>
+
+        <div class="profile-box">
+          <div id="avatarFallback" class="avatar-fallback">U</div>
+          <div class="profile-info">
+            <p id="settingsName" class="profile-name">Kullanıcı</p>
+            <p id="settingsEmail" class="profile-email">-</p>
+          </div>
+        </div>
+
+        <label class="settings-label" for="nickInput" data-i18n="nickname_label">Nickname</label>
+        <input id="nickInput" type="text" maxlength="64" placeholder="Nickname girin" data-i18n-placeholder="nickname_placeholder" />
+        <button id="saveNickBtn" type="button" data-i18n="save_nickname">Nickname Kaydet</button>
+
+        <div class="settings-group">
+          <p data-i18n="notifications_group">Bildirimler</p>
+          <label class="switch-row"><span data-i18n="new_messages">Yeni mesajlar</span><input id="notifyNewMessages" type="checkbox" checked /></label>
+          <label class="switch-row"><span data-i18n="mentions">Bahsetmeler</span><input id="notifyMentions" type="checkbox" checked /></label>
+        </div>
+
+        <div class="settings-group">
+          <p data-i18n="appearance_group">Görünüm</p>
+          <label class="switch-row"><span data-i18n="dark_mode">Karanlık mod</span><input id="darkModeToggle" type="checkbox" /></label>
+        </div>
+
+        <div class="settings-group">
+          <p data-i18n="language_group">Dil</p>
+          <label class="switch-row">
+            <span data-i18n="language_label">Uygulama dili</span>
+            <select id="languageSelect">
+              <option value="tr">Türkçe</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+        </div>
+
+        <button id="logoutBtn" class="danger-btn" type="button" data-i18n="logout">Çıkış yap</button>
+      </section>
+
+      <footer id="guestFooter" class="footer-note" data-i18n="footer_note">
+        Aynı URL'i görüntüleyen kişilerle sohbet edin
+      </footer>
     </section>
-
-    <section id="chatPanel" class="panel chat-panel" style="display:none;">
-      <div class="chat-head">
-        <p id="userLabel" class="user-label">Not signed in</p>
-      </div>
-      <section id="messages" class="messages" aria-live="polite"></section>
-      <form id="composer" class="composer">
-        <textarea id="messageInput" maxlength="1000" placeholder="Write a message..."></textarea>
-        <button id="sendBtn" type="submit">Send</button>
-      </form>
-    </section>
-
-    <aside id="settingsDrawer" class="settings-drawer" style="display:none;">
-      <div class="drawer-head">
-        <h2>Settings</h2>
-        <button id="closeSettingsBtn" class="ghost-btn" type="button">Close</button>
-      </div>
-      <p id="settingsEmail" class="settings-email"></p>
-      <label for="nickInput">Nickname</label>
-      <input id="nickInput" type="text" maxlength="64" placeholder="Enter nickname" />
-      <button id="saveNickBtn" type="button">Save Nickname</button>
-      <button id="logoutBtn" type="button" class="danger-btn">Logout</button>
-    </aside>
-
     <p id="status" class="status"></p>
   </main>
   <script type="module" src="popup.js"></script>

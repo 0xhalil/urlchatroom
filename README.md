@@ -39,7 +39,7 @@ URLChatroom is a Chrome extension + FastAPI backend that lets users chat on the 
 - Google sign-in using extension OAuth token.
 - Bearer token required for posting messages.
 - Nickname edit endpoint for signed-in users.
-- Popup settings drawer (nickname + logout).
+- Popup settings view (nickname + logout).
 - WebSocket reconnect and improved UI state handling.
 
 ## Auth Environment Variables
