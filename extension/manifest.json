@@ -3,15 +3,36 @@
   "name": "URLChatroom",
   "version": "0.1.0",
   "description": "Chat with other users on the same URL from extension popup.",
-  "permissions": ["storage", "tabs", "identity", "notifications"],
-  "host_permissions": ["<all_urls>", "http://localhost:8000/*"],
+  "permissions": [
+    "storage",
+    "tabs",
+    "identity",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:8080/*"
+  ],
   "oauth2": {
     "client_id": "718285455702-koc0js6sr4l8gnggfshpk1fjhu4vsaf5.apps.googleusercontent.com",
-    "scopes": ["openid", "email", "profile"]
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
   },
   "action": {
-    "default_title": "URLChatroom",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "background": {
     "service_worker": "service-worker.js"

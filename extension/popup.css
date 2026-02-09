@@ -18,6 +18,9 @@
   --message-other-text: #0f172a;
   --profile-bg-a: #eff6ff;
   --profile-bg-b: #eef2ff;
+  --toggle-off: #cbd5e1;
+  --toggle-on: #2563eb;
+  --toggle-knob: #ffffff;
 }
 
 body.dark {
@@ -37,6 +40,9 @@ body.dark {
   --message-other-text: #e8f0fc;
   --profile-bg-a: #1a2b47;
   --profile-bg-b: #1f3152;
+  --toggle-off: #334155;
+  --toggle-on: #3b82f6;
+  --toggle-knob: #ffffff;
 }
 
 body {
@@ -86,10 +92,16 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 h1 {
@@ -126,6 +138,16 @@ h1 {
   height: 30px;
   cursor: pointer;
   color: var(--text);
+}
+
+#openSettingsBtn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  line-height: 1;
 }
 
 .url-box {
@@ -347,6 +369,12 @@ textarea {
   margin-bottom: 10px;
 }
 
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
 .avatar-fallback {
   width: 42px;
   height: 42px;
@@ -404,11 +432,63 @@ textarea {
 .switch-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin: 8px 0;
   color: var(--text);
   font-size: 12px;
   gap: 8px;
+}
+
+.switch-row span {
+  flex: 1;
+}
+
+.switch-row input[type="checkbox"] {
+  margin-left: auto;
+  width: 42px;
+  height: 24px;
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--toggle-off);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex: 0 0 auto;
+}
+
+.switch-row input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--toggle-knob);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.switch-row input[type="checkbox"]:checked {
+  background: var(--toggle-on);
+}
+
+.switch-row input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
+}
+
+.switch-row input[type="checkbox"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--toggle-on) 50%, white);
+  outline-offset: 2px;
+}
+
+.switch-row select {
+  margin-left: auto;
+  width: 132px;
+  height: 32px;
+  padding: 0 9px;
+  flex: 0 0 auto;
 }
 
 .danger-btn {
@@ -437,4 +517,12 @@ textarea {
   min-height: 14px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.sign-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
