@@ -1,7 +1,7 @@
 import { buildThreadKey, normalizeUrl } from "./lib/url-normalize.js";
 
-const API_BASE = "http://localhost:8000";
-const WS_BASE = "ws://localhost:8000";
+const API_BASE = "http://localhost:8080";
+const WS_BASE = "ws://localhost:8080";
 const NOTIFY_ICON_URL = "https://www.google.com/favicon.ico";
 
 const DEFAULT_SETTINGS = {

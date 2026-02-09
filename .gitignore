@@ -48,3 +48,6 @@ Icon
 
 # Project Specific
 backend/scripts/reset_db.py
+
+# Agent / WorkflowConfiguration
+.agent/
